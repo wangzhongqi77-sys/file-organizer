@@ -34,8 +34,9 @@ scan_plan.py  →  plan.csv  →  HUMAN REVIEW  →  execute_plan.py  →  repor
                                                             undo.py  (reverses it)
 ```
 
-1. **Scan** — `python scan_plan.py <folder> --out plan.csv --ext png,jpg,pdf,mp4 --rules rules.json`
+1. **Scan** — `python scan_plan.py <folder> --out plan.csv --ext png,jpg,pdf,mp4 --rules rules.json [--match-dir]`
    Lists matching files and proposes a category for each. **Touches nothing.**
+   Filename matching only by default; add `--match-dir` to fall back to the containing folder name when the filename misses. The `match_on` column in the CSV records which one hit, so you can spot low-confidence rows during review.
 2. **Review** — open `plan.csv`, fix wrong rows. The CSV is the single source of truth.
 3. **Execute** — `python execute_plan.py plan.csv <dest> --src-root <folder> --dedup`
    Moves files to `<dest>/<category>/`. Renames on collision with `(1) (2)` suffixes — **never overwrites**. Duplicates (same MD5) are skipped, not deleted. Refuses any path outside `--src-root`.
@@ -121,7 +122,7 @@ scan_plan.py  →  plan.csv  →  人工确认  →  execute_plan.py  →  repor
                                                         undo.py  (照账本倒着撤)
 ```
 
-1. **扫描**：`python scan_plan.py <文件夹> --out plan.csv --ext png,jpg,pdf,mp4 --rules rules.json` —— 只出清单，一个文件不动
+1. **扫描**：`python scan_plan.py <文件夹> --out plan.csv --ext png,jpg,pdf,mp4 --rules rules.json [--match-dir]` —— 只出清单，一个文件不动。默认只匹配文件名；加 `--match-dir` 后文件名没命中才用所在目录名兜底，CSV 的 `match_on` 列会标注命中的是「文件名」还是「目录名」，复核时好抓低置信行。
 2. **确认**：打开 plan.csv 检查分错的行，改完保存
 3. **执行**：`python execute_plan.py plan.csv <目标目录> --src-root <源目录> --dedup` —— 重名加 `(1)(2)` 后缀不覆盖；内容相同（MD5）跳过不删；越界路径拒绝
 4. **撤销**：`python undo.py report.txt`（可先 `--dry-run` 预览）—— 倒序还原，原位被占跳过

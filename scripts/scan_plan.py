@@ -2,9 +2,11 @@
 """scan_plan.py - 扫描目录生成分类移动计划（只分析不移动）
 
 用法:
-    python scan_plan.py <root> --out plan.csv [--ext png,jpg,pdf,mp4] [--rules rules.json] [--exclude dir1,dir2]
+    python scan_plan.py <root> --out plan.csv [--ext png,jpg,pdf,mp4] [--rules rules.json] [--exclude dir1,dir2] [--match-dir]
 
-输出 CSV: src,dst_path,rule_match   -- 人工确认后再交给 execute_plan.py
+输出 CSV: src,file,category,kw,match_on   -- 人工确认后再交给 execute_plan.py
+match_on: 文件名 / 目录名 / 空(未分类)。默认只匹配文件名；加 --match-dir 后，
+          文件名未命中才用所在目录名兜底，并在 match_on 列标注来源便于人工复核。
 
 规则 JSON ~/rules.json:
 {
@@ -48,15 +50,23 @@ def load_rules(path):
         return json.load(f)
 
 
-def match_rules(fn, rules):
-    """返回 (类别, 关键词)。数组顺序即优先级。"""
+def match_rules(fn, rules, dirname=None):
+    """返回 (类别, 关键词, 匹配来源)。数组顺序即优先级。
+
+    先按文件名匹配；未命中且传入 dirname 时，再按所在目录名兜底匹配。
+    """
     if not rules:
-        return ("未分类", "")
+        return ("未分类", "", "")
     for cat, kws in rules.items():
         for kw in kws:
             if kw in fn:
-                return (cat, kw)
-    return ("未分类", "")
+                return (cat, kw, "文件名")
+    if dirname:
+        for cat, kws in rules.items():
+            for kw in kws:
+                if kw in dirname:
+                    return (cat, kw, "目录名")
+    return ("未分类", "", "")
 
 
 def main():
@@ -65,6 +75,8 @@ def main():
     ap.add_argument("--out", default="plan.csv")
     ap.add_argument("--ext", default="png,jpg,jpeg,gif,webp,bmp,pdf,mp4,mov,avi,mkv,webm,wmv,flv,m4v,mp3,wav")
     ap.add_argument("--rules", default="")
+    ap.add_argument("--match-dir", action="store_true",
+                    help="文件名未命中时，用所在目录名兜底匹配（默认关闭，行为不变）")
     ap.add_argument("--exclude", default=",".join(DEFAULT_EXCLUDE))
     args = ap.parse_args()
 
@@ -78,12 +90,13 @@ def main():
     rows = []
     for p in files:
         fn = os.path.basename(p)
-        cat, kw = match_rules(fn, rules)
-        rows.append({"src": p, "category": cat, "kw": kw, "file": fn})
+        dirname = os.path.basename(os.path.dirname(p)) if args.match_dir else None
+        cat, kw, match_on = match_rules(fn, rules, dirname)
+        rows.append({"src": p, "file": fn, "category": cat, "kw": kw, "match_on": match_on})
     rows.sort(key=lambda r: r["src"])
 
     with open(args.out, "w", newline="", encoding="utf-8-sig") as f:
-        w = csv.DictWriter(f, fieldnames=["src", "file", "category", "kw"])
+        w = csv.DictWriter(f, fieldnames=["src", "file", "category", "kw", "match_on"])
         w.writeheader()
         w.writerows(rows)
 

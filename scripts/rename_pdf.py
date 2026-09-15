@@ -104,9 +104,14 @@ def main():
             os.rename(src, dst)
             report.append(f"{os.path.basename(src)} -> {new}")
         except PermissionError:
-            os.chmod(src, 0o666)
-            os.rename(src, dst)
-            report.append(f"{os.path.basename(src)} -> {new}")
+            try:
+                os.chmod(src, 0o666)
+                os.rename(src, dst)
+                report.append(f"{os.path.basename(src)} -> {new}")
+            except OSError as e:
+                report.append(f"[ERROR] {src}: {e}")
+        except OSError as e:
+            report.append(f"[ERROR] {src}: {e}")
 
     with open(args.out, "w", encoding="utf-8-sig") as f:
         f.write("\n".join(report) + f"\n\n共重命名 {len(report)} 个\n")
