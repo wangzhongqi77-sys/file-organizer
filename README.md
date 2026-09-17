@@ -38,6 +38,7 @@ scan_plan.py  →  plan.csv  →  HUMAN REVIEW  →  execute_plan.py  →  repor
    Lists matching files and proposes a category for each. **Touches nothing.**
    Filename matching only by default; add `--match-dir` to fall back to the containing folder name when the filename misses. The `match_on` column in the CSV records which one hit, so you can spot low-confidence rows during review.
 2. **Review** — open `plan.csv`, fix wrong rows. The CSV is the single source of truth.
+   For image batches, eyeball each file first via `contact_sheet.py`: it renders a numbered thumbnail grid (`#N`) plus `order_<tag>.txt` mapping index → real filename. Never put real filenames in the grid — AI mis-reads CJK filenames. Thumbnail reads are screening only: zoom into any doubtful index for a final call.
 3. **Execute** — `python execute_plan.py plan.csv <dest> --src-root <folder> --dedup`
    Moves files to `<dest>/<category>/`. Renames on collision with `(1) (2)` suffixes — **never overwrites**. Duplicates (same MD5) are skipped, not deleted. Refuses any path outside `--src-root`.
 4. **Undo** — `python undo.py report.txt` (or `--dry-run` first)
@@ -123,7 +124,7 @@ scan_plan.py  →  plan.csv  →  人工确认  →  execute_plan.py  →  repor
 ```
 
 1. **扫描**：`python scan_plan.py <文件夹> --out plan.csv --ext png,jpg,pdf,mp4 --rules rules.json [--match-dir]` —— 只出清单，一个文件不动。默认只匹配文件名；加 `--match-dir` 后文件名没命中才用所在目录名兜底，CSV 的 `match_on` 列会标注命中的是「文件名」还是「目录名」，复核时好抓低置信行。
-2. **确认**：打开 plan.csv 检查分错的行，改完保存
+2. **确认**：打开 plan.csv 检查分错的行，改完保存。图片量大时先用 `contact_sheet.py` 出编号拼图逐张过目（黄底 #N 标签 + `order_<tag>.txt` 映射，禁止在图上写真实文件名——AI 会把中文名 OCR 认错）；缩略图存疑的编号必须放大原图再定，不能凭小图下结论
 3. **执行**：`python execute_plan.py plan.csv <目标目录> --src-root <源目录> --dedup` —— 重名加 `(1)(2)` 后缀不覆盖；内容相同（MD5）跳过不删；越界路径拒绝
 4. **撤销**：`python undo.py report.txt`（可先 `--dry-run` 预览）—— 倒序还原，原位被占跳过
 5. **PDF 改名**（可选）：`python rename_pdf.py <文件夹>` —— 文本层优先、OCR 兜底，按内容重建文件名；识别不出就保留原名

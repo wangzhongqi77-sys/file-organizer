@@ -44,6 +44,8 @@ description: "将中性来源命名的文件夹（下载目录、网盘导出、
 
 - `scan_plan.py`：扫描 → 规则分类（读外部 JSON 规则）→ 输出计划 CSV，**不改动文件**。用法：`python scan_plan.py <root> --out plan.csv --ext <...> --rules rules.json [--match-dir]`
   - 默认**只按文件名**匹配；加 `--match-dir` 后，文件名未命中才用**所在目录名**兜底，CSV 的 `match_on` 列标注来源是「文件名/目录名」，便于人工复核。
+- `contact_sheet.py`：批量图片逐张核验拼图。用法：`python contact_sheet.py <目录> <TAG> <输出目录> [PER=25] [COLS=5]`
+  - 每张图配**黄底黑字 #N 序号标签** + 输出 `order_<TAG>.txt`（序号→真实文件名），AI 核验时只说编号，避免中文文件名 OCR 幻觉；缩略图判断存疑的编号再放大原图确认。
 - `execute_plan.py`：读计划执行移动/重命名/去重，输出每类统计 + 报告。用法：`python execute_plan.py plan.csv <dest> --src-root <源目录>`（安全闸：越界路径拒绝移动；不指定则不校验）
 - `rename_pdf.py`：PDF 内容识别重命名（pypdf 文本层 → RapidOCR 兜底）。用法：`python rename_pdf.py <dir> --out report.txt`
 - `undo.py`：按 execute_plan 的报告反向撤销移动（倒序还原、原位被占跳过不覆盖、`--dry-run` 预览）。用法：`python undo.py report.txt [--dry-run]`
@@ -59,5 +61,6 @@ description: "将中性来源命名的文件夹（下载目录、网盘导出、
 ## 注意事项
 
 - **先确认类别命名再批量执行**（不同行业/公司类别不同）
+- **批量图片必须拼图逐张核验**（`contact_sheet.py`）：缩略图判断不可靠，可疑编号放大原图；按文件名规则迁移后的目录要抽样复核（历史教训：规则迁移目录错位 25 张）
 - 分类规则和关键词清单建议做成 skill 内置 JSON 资源，跨会话复用
 - 保持通用：脚本不内置真实业务数据（公司名/品牌），由用户在会话中提供
